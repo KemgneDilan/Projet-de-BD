@@ -38,3 +38,4 @@ Puis ouvrir :
 - Le backend a été retiré : le front-end fonctionne sans serveur Node ou MongoDB.
 - Les données sont chargées localement depuis `src/data/mockData.js`.
 - Le projet est prêt à être étendu avec un backend si nécessaire ultérieurement.
+# Projet-de-BD
