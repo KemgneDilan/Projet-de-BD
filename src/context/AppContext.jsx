@@ -22,7 +22,31 @@ const calcAnneeScolaire = (date = new Date()) => {
     : `${d.getFullYear() - 1}-${d.getFullYear()}`;
 };
 
+const buildSessionMetadata = (label, openedAt = new Date()) => {
+  const startYear = Number(label?.split('-')[0]);
+  const startDate = new Date(startYear || new Date(openedAt).getFullYear(), 8, 1);
+  const endDate = new Date(startYear + 1 || new Date(openedAt).getFullYear() + 1, 6, 31);
+  return {
+    label,
+    anneeScolaire: label,
+    debut: startDate.toISOString(),
+    fin: endDate.toISOString(),
+    debutLabel: startDate.toLocaleDateString('fr-FR'),
+    finLabel: endDate.toLocaleDateString('fr-FR')
+  };
+};
+
+const getNextSessionLabel = (currentLabel) => {
+  const currentYear = Number(currentLabel?.split('-')[0]);
+  if (Number.isFinite(currentYear)) {
+    return `${currentYear + 1}-${currentYear + 2}`;
+  }
+  return calcAnneeScolaire(new Date(new Date().getFullYear(), 8, 1));
+};
+
 export function AppProvider({ children }) {
+  const initialAnneeScolaire = calcAnneeScolaire();
+
   /* ── État principal ─────────────────────────────────────────── */
   const [utilisateurs, setUtilisateurs] = useState(mockData.users);
   const [classes,      setClasses]      = useState(mockData.classes);
@@ -30,11 +54,22 @@ export function AppProvider({ children }) {
   const [matieres,     setMatieres]     = useState(mockData.matieres);
   const [frais,        setFraisState]   = useState(mockData.frais);
   const [paiements,    setPaiements]    = useState(mockData.paiements);
-  const [notes,        setNotes]        = useState(mockData.notes);
+  const [notes,        setNotes]        = useState(() => (mockData.notes || []).map(note => ({ ...note, session: note.session || initialAnneeScolaire })));
   const [coefficients, setCoefficients] = useState(mockData.coefficients);
-  const [evaluations,  setEvaluations]  = useState(mockData.evaluations);
+  const [evaluations,  setEvaluations]  = useState(() => (mockData.evaluations || []).map(evaluation => ({ ...evaluation, session: evaluation.session || initialAnneeScolaire })));
   const [messages,     setMessages]     = useState(mockData.messages);
-  const [emploisDuTemps, setEmploisDuTemps] = useState(mockData.emploisDuTemps || []);
+  const [emploisDuTemps, setEmploisDuTemps] = useState(() => (mockData.emploisDuTemps || []).map(edt => ({ ...edt, session: edt.session || initialAnneeScolaire })));
+  const [sessions, setSessions] = useState(() => {
+    const initialSession = buildSessionMetadata(initialAnneeScolaire);
+    return [{
+      id: randomId(),
+      ...initialSession,
+      status: 'active',
+      openedAt: new Date().toISOString(),
+      closedAt: null,
+      archive: { notes: [], evaluations: [], emploisDuTemps: [], coefficients: [] }
+    }];
+  });
   const [schoolSettings, setSchoolSettings] = useState({
     nom: 'École Les Étoiles',
     sousTitreFR: 'Primaire & Maternelle — Yaoundé, Cameroun',
@@ -88,6 +123,72 @@ export function AppProvider({ children }) {
   const notify = (message, type = 'success') => {
     setNotification({ message, type });
     setTimeout(() => setNotification(null), 3500);
+  };
+
+  const activeSession = sessions.find(s => s.status === 'active') || sessions[sessions.length - 1] || null;
+  const activeSessionLabel = activeSession?.anneeScolaire || activeSession?.label || initialAnneeScolaire;
+
+  const archiverDonneesSession = useCallback((sessionToArchive, snapshotNotes, snapshotEvaluations, snapshotEmploisDuTemps, snapshotCoefficients) => {
+    if (!sessionToArchive) return;
+    setSessions(prev => prev.map(session =>
+      session.id === sessionToArchive.id
+        ? {
+            ...session,
+            archive: {
+              notes: snapshotNotes || [],
+              evaluations: snapshotEvaluations || [],
+              emploisDuTemps: snapshotEmploisDuTemps || [],
+              coefficients: snapshotCoefficients || []
+            }
+          }
+        : session
+    ));
+  }, []);
+
+  const ouvrirNouvelleAnneeScolaire = async (label) => {
+    await delay(100);
+    if (activeSession) {
+      archiverDonneesSession(activeSession, notes, evaluations, emploisDuTemps, coefficients);
+      setSessions(prev => prev.map(session =>
+        session.id === activeSession.id
+          ? { ...session, status: 'closed', closedAt: new Date().toISOString() }
+          : session
+      ));
+    }
+    const nouveauLabel = (label && label.trim()) ? label.trim() : getNextSessionLabel(activeSession?.anneeScolaire || activeSession?.label || initialAnneeScolaire);
+    const metadata = buildSessionMetadata(nouveauLabel);
+    const nouvelleSession = {
+      id: randomId(),
+      ...metadata,
+      status: 'active',
+      openedAt: new Date().toISOString(),
+      closedAt: null,
+      archive: { notes: [], evaluations: [], emploisDuTemps: [], coefficients: [] }
+    };
+    setSessions(prev => [...prev, nouvelleSession]);
+    setNotes([]);
+    setEvaluations([]);
+    setEmploisDuTemps([]);
+    setCoefficients([]);
+    notify(`Nouvelle session scolaire ouverte : ${nouveauLabel}`, 'success');
+    return nouvelleSession;
+  };
+
+  const cloreSessionActive = async () => {
+    await delay(100);
+    if (!activeSession) return null;
+    archiverDonneesSession(activeSession, notes, evaluations, emploisDuTemps, coefficients);
+    setSessions(prev => prev.map(session =>
+      session.id === activeSession.id
+        ? { ...session, status: 'closed', closedAt: new Date().toISOString() }
+        : session
+    ));
+    setNotes([]);
+    setEvaluations([]);
+    setEmploisDuTemps([]);
+    setCoefficients([]);
+    notify('Session scolaire clôturée. Les données annuelles ont été archivées.', 'warning');
+    return activeSession;
   };
 
   /* ── Chargement initial ─────────────────────────────────────── */
@@ -158,7 +259,7 @@ export function AppProvider({ children }) {
     const dateInscription = new Date().toISOString();
     const anneeScolaire = calcAnneeScolaire(dateInscription);
     const matricule = `MAT-${new Date().getFullYear()}-${String(eleves.length + 1).padStart(3, '0')}`;
-    const nouveau = { id: randomId(), matricule, dateInscription, anneeScolaire, statut: 'actif', ...data };
+    const nouveau = { id: randomId(), matricule, dateInscription, anneeScolaire, statut: 'actif', session: activeSessionLabel, ...data };
     setEleves(prev => [nouveau, ...prev]);
     notify('Élève inscrit avec succès');
     return nouveau;
@@ -188,7 +289,7 @@ export function AppProvider({ children }) {
   ═══════════════════════════════════════════════════════════════ */
   const ajouterClasse = async (data) => {
     await delay(100);
-    const nouvelle = { id: randomId(), effectif: 0, annee: '2025-2026', ...data };
+    const nouvelle = { id: randomId(), effectif: 0, annee: activeSessionLabel, session: activeSessionLabel, ...data };
     setClasses(prev => [nouvelle, ...prev]);
     notify('Classe créée');
     return nouvelle;
@@ -214,9 +315,9 @@ export function AppProvider({ children }) {
     setEmploisDuTemps(prev => {
       const exists = prev.some(e => e.classeId === classeId);
       if (exists) {
-        return prev.map(e => e.classeId === classeId ? { ...e, ...data } : e);
+        return prev.map(e => e.classeId === classeId ? { ...e, ...data, session: activeSessionLabel } : e);
       }
-      return [...prev, { id: `edt${Date.now()}`, classeId, ...data }];
+      return [...prev, { id: `edt${Date.now()}`, classeId, session: activeSessionLabel, ...data }];
     });
     notify('Emploi du temps sauvegardé');
   };
@@ -279,10 +380,11 @@ export function AppProvider({ children }) {
   const enregistrerBulletin = async (data) => {
     await delay(100);
     const existing = notes.find(n => n.eleveId === data.eleveId && n.sequence === data.sequence);
+    const payload = { ...data, session: data.session || activeSessionLabel };
     if (existing) {
-      setNotes(prev => prev.map(n => n.id === existing.id ? { ...n, ...data } : n));
+      setNotes(prev => prev.map(n => n.id === existing.id ? { ...n, ...payload } : n));
     } else {
-      setNotes(prev => [{ id: randomId(), ...data }, ...prev]);
+      setNotes(prev => [{ id: randomId(), ...payload }, ...prev]);
     }
     notify('Bulletin enregistré');
   };
@@ -311,12 +413,13 @@ export function AppProvider({ children }) {
           newNotes[existingBulletinIdx] = bulletin;
         } else {
           // Nouveau bulletin pour cette séquence
-          const anneeScolaire = '2025-2026';
+          const anneeScolaire = activeSessionLabel;
           newNotes.push({
             id: randomId(),
             eleveId,
             sequence,
             anneeScolaire,
+            session: activeSessionLabel,
             notes: [{ matiereId, ...dataMatiere }],
             absences: 0,
             retards: 0,
@@ -397,10 +500,10 @@ export function AppProvider({ children }) {
     const existing = evaluations.find(e => e.classeId === classeId && e.matiereId === matiereId);
     if (existing) {
       setEvaluations(prev => prev.map(e =>
-        e.id === existing.id ? { ...e, evaluations: evaluationsData } : e
+        e.id === existing.id ? { ...e, evaluations: evaluationsData, session: activeSessionLabel } : e
       ));
     } else {
-      setEvaluations(prev => [{ id: randomId(), classeId, matiereId, evaluations: evaluationsData }, ...prev]);
+      setEvaluations(prev => [{ id: randomId(), classeId, matiereId, evaluations: evaluationsData, session: activeSessionLabel }, ...prev]);
     }
     notify('Évaluations définies');
   };
@@ -628,6 +731,7 @@ export function AppProvider({ children }) {
       utilisateurs, classes, eleves, matieres,
       frais, paiements, notes, coefficients, evaluations, messages, schoolSettings,
       emploisDuTemps, sauvegarderEmploiDuTemps,
+      sessions, activeSession, activeSessionLabel,
 
       // UI globale
       utilisateurActif, notification, darkMode, langue, isSidebarOpen, setSidebarOpen, toggleSidebar,
@@ -655,6 +759,9 @@ export function AppProvider({ children }) {
 
       // Bulletins
       enregistrerBulletin, updateNotesMasse,
+
+      // Années scolaires
+      ouvrirNouvelleAnneeScolaire, cloreSessionActive,
 
       // Rang auto
       calculerRang,

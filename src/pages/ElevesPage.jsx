@@ -4,7 +4,7 @@
  * lieu de naissance via liste déroulante des villes camerounaises,
  * filtrage par rôle, dark mode et i18n.
  */
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import T from '../i18n/translations';
 import VILLES from '../data/villesCameroun';
@@ -56,7 +56,7 @@ export function StudentProfileModal({
   const S = STUDENT_STYLES;
   return (
         <div className="modal-overlay" onClick={() => setModal(null)}>
-          <div className="modal" style={{ maxWidth:600 }} onClick={e => e.stopPropagation()}>
+          <div className="modal" style={{ maxWidth:600, width:'min(92vw, 600px)', maxHeight:'88vh', overflowY:'auto' }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2 style={S.modalTitle}>{t.dossierEleve}</h2>
               <button className="btn btn-ghost btn-icon" onClick={() => setModal(null)}>✕</button>
@@ -375,6 +375,26 @@ export default function ElevesPage({ initialTab = null }) {
         {peutModifier && (
           <button className="btn btn-primary" onClick={openAdd}><UserPlus size={16} /> {t.inscrire}</button>
         )}
+      </div>
+
+      <div className="card" style={{ padding:'16px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+        <div>
+          <div style={{ fontSize:12, fontWeight:700, color:'var(--text-secondary)', textTransform:'uppercase', letterSpacing:1 }}>
+            {role === 'parent' ? 'Dossier scolaire' : 'Gestion des dossiers'}
+          </div>
+          <div style={{ fontSize:18, fontWeight:700, color:'var(--text-primary)' }}>
+            {role === 'parent' ? 'Suivi de vos enfants' : 'Élèves et discipline'}
+          </div>
+          <div style={{ fontSize:13, color:'var(--text-secondary)', marginTop:4 }}>
+            {role === 'parent'
+              ? 'Consultez les informations, la discipline et le suivi scolaire de chaque enfant.'
+              : 'Gérez les informations de chaque élève, leur discipline et les accès depuis une vue claire.'}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          <span className="badge badge-primary">{filtered.length} {t.eleveTrouve}</span>
+          {role === 'parent' && <span className="badge badge-success">{filtered.filter(e => e.statut === 'actif').length} actif(s)</span>}
+        </div>
       </div>
 
       <div style={S.counter}>{filtered.length} {t.eleveTrouve}</div>

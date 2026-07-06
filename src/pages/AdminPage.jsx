@@ -15,13 +15,16 @@ export default function AdminPage() {
     utilisateurs, peutAcceder, peutCreerCompteHaut, peutInscrirePersonnel,
     modifierUtilisateur, ajouterUtilisateur,
     schoolSettings, updateSchoolSettings,
-    utilisateurActif, langue
+    utilisateurActif, langue,
+    sessions, activeSession, activeSessionLabel,
+    ouvrirNouvelleAnneeScolaire, cloreSessionActive
   } = useApp();
   const t = T[langue] || T.fr;
   const [activeTab, setActiveTab] = useState('parametres');
   const [localSettings, setLocalSettings] = useState(schoolSettings);
   const [modalUser, setModalUser] = useState(false);
   const [photo, setPhoto] = useState(null);
+  const [nouvelleAnneeLabel, setNouvelleAnneeLabel] = useState('');
   const fileRef = useRef();
   const [formUser, setFormUser] = useState({ 
     prenom:'', nom:'', email:'', telephone:'', 
@@ -43,7 +46,7 @@ export default function AdminPage() {
   const totalUsers = utilisateurs.length;
   const totalEnseignants = utilisateurs.filter(u => u.role === 'enseignant').length;
   const totalParents = utilisateurs.filter(u => u.role === 'parent').length;
-  const totalSessions = 3;
+  const totalSessions = sessions.length;
 
   const handleToggleStatus = (id, currentStatus) => {
     modifierUtilisateur(id, { actif: !currentStatus });
@@ -73,6 +76,16 @@ export default function AdminPage() {
       setFormUser({...formUser, photo: ev2.target.result});
     };
     reader.readAsDataURL(f);
+  };
+
+  const handleOpenNewSession = async () => {
+    const label = nouvelleAnneeLabel.trim() || activeSessionLabel;
+    await ouvrirNouvelleAnneeScolaire(label);
+    setNouvelleAnneeLabel('');
+  };
+
+  const handleCloseSession = async () => {
+    await cloreSessionActive();
   };
 
   const handleCreateUser = () => {
@@ -115,7 +128,7 @@ export default function AdminPage() {
         </div>
         <div style={{ flex: 1, background: '#0D2B40', padding: '24px', borderRadius: 8, color: 'white', textAlign: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}>
           <div style={{ fontSize: 32, fontWeight: 700, lineHeight: 1, marginBottom: 8 }}>{totalSessions}</div>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>Sessions</div>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>Sessions scolaires</div>
         </div>
       </div>
 
@@ -123,7 +136,7 @@ export default function AdminPage() {
       <div style={{ display: 'flex', gap: 16, borderBottom: '1px solid var(--border-color)', marginTop: 8 }}>
         {[
           { key: 'utilisateurs', label: 'Utilisateurs', icon: <Users size={16} /> },
-          { key: 'sessions',     label: 'Sessions',     icon: <Calendar size={16} /> },
+          { key: 'sessions',     label: 'Sessions scolaires', icon: <Calendar size={16} /> },
           { key: 'parametres',   label: 'Paramètres',   icon: <Settings size={16} /> },
         ].map(tab => (
           <button key={tab.key}
@@ -271,11 +284,51 @@ export default function AdminPage() {
       {/* ── Sessions ── */}
       {activeTab === 'sessions' && (
         <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontSize: 20, color: '#0D2B40', fontFamily: 'serif', marginBottom: 20 }}>Sessions Actives</h2>
-          <div className="empty-state">
-            <Calendar size={48} color="var(--text-muted)" style={{ marginBottom: 16 }} />
-            <h3>Aucune session en cours</h3>
-            <p>Historique et suivi des sessions utilisateurs à venir.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+            <div>
+              <h2 style={{ fontSize: 20, color: '#0D2B40', fontFamily: 'serif', margin: 0 }}>Sessions scolaires</h2>
+              <p style={{ margin: '6px 0 0', color: 'var(--text-muted)' }}>La session scolaire courante est {activeSession?.label || activeSessionLabel}.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                value={nouvelleAnneeLabel}
+                onChange={(e) => setNouvelleAnneeLabel(e.target.value)}
+                placeholder="2026-2027"
+                style={{ minWidth: 150, padding: '10px 12px', borderRadius: 6, border: '1px solid var(--border-color)' }}
+              />
+              <button onClick={handleOpenNewSession} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Plus size={16} /> Ouvrir une nouvelle session
+              </button>
+              <button onClick={handleCloseSession} className="btn btn-cancel" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Calendar size={16} /> Clore la session courante
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gap: 12 }}>
+            {[...sessions].reverse().map(session => (
+              <div key={session.id} style={{ border: '1px solid var(--border-color)', borderRadius: 10, padding: 16, background: session.status === 'active' ? '#EBF5FB' : 'var(--bg-card)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: '#0D2B40' }}>Session scolaire · {session.label}</div>
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
+                      {session.status === 'active' ? 'En cours' : 'Archivée'}
+                      {session.openedAt ? ` • Ouverte le ${new Date(session.openedAt).toLocaleDateString('fr-FR')}` : ''}
+                      {session.closedAt ? ` • Clôturée le ${new Date(session.closedAt).toLocaleDateString('fr-FR')}` : ''}
+                    </div>
+                  </div>
+                  <span style={{ padding: '6px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, background: session.status === 'active' ? '#0D2B40' : '#6B7280', color: 'white' }}>
+                    {session.status === 'active' ? 'Active' : 'Archivée'}
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 12, color: 'var(--text-secondary)', fontSize: 13 }}>
+                  <div><strong>Année scolaire</strong><br />{session.anneeScolaire || session.label}</div>
+                  <div><strong>Début</strong><br />{session.debutLabel || (session.debut ? new Date(session.debut).toLocaleDateString('fr-FR') : '—')}</div>
+                  <div><strong>Fin</strong><br />{session.finLabel || (session.fin ? new Date(session.fin).toLocaleDateString('fr-FR') : '—')}</div>
+                  <div><strong>Archive</strong><br />Notes : {session.archive?.notes?.length || 0} · Éval. : {session.archive?.evaluations?.length || 0}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

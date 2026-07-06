@@ -352,8 +352,8 @@ export default function SaisieNotesPage() {
           </div>
           
           {/* Bottom Sticky Action Bar */}
-          <div style={{ position: 'fixed', bottom: 20, left: 280, right: 40, background: 'var(--bg-card)', padding: '16px 24px', borderRadius: 12, boxShadow: '0 4px 20px rgba(0,0,0,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 100, border: '1px solid var(--border-color)' }}>
-            <div style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>
+          <div className="notes-action-bar">
+            <div className="notes-action-copy" style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 600 }}>
                <span style={{ color: 'var(--text-primary)' }}>{matiere?.nom}</span> · {classe?.nom} · {selectedSequence} <span style={{ marginLeft: 8 }}>{nbCompletes}/{nbEleves} élève(s) prêt(s)</span>
             </div>
             <button 

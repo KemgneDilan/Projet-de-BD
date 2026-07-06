@@ -105,7 +105,7 @@ const getLabel = (id, role, lang) => {
 
 const ROLE_LABELS = {
   admin:     { label:'Administrateur', color:'#E74C3C', bg:'rgba(231,76,60,.15)' },
-  fondateur: { label:'Fondateur', color:'#F39C12', bg:'rgba(243,156,18,.15)' },
+  fondateur: { label:'Fondateur', color:'var(--primary)', bg:'rgba(93,173,226,.15)' },
   directeur: { label:'Directeur', color:'#27AE60', bg:'rgba(39,174,96,.15)' },
   enseignant:{ label:'Enseignant', color:'#2980B9', bg:'rgba(41,128,185,.15)' },
   parent:    { label:'Parent',    color:'#8E44AD', bg:'rgba(142,68,173,.15)' },
@@ -231,7 +231,7 @@ const styles = {
     flexShrink: 0,
   },
   brand: { display: 'flex', alignItems: 'center', gap: 12 },
-  brandIcon: { color: '#F39C12' },
+  brandIcon: { color: 'var(--primary)' },
   brandName: { fontFamily: 'Playfair Display, serif', color: 'white', fontSize: 18, fontWeight: 700 },
   brandSub: { fontSize: 12, color: 'rgba(255,255,255,.5)', marginTop: 2 },
   closeBtn: {
@@ -249,8 +249,8 @@ const styles = {
   },
   avatarCircle: {
     width: 48, height: 48, borderRadius: '50%',
-    background: 'rgba(243,156,18,.2)', border: '2px solid rgba(243,156,18,.4)',
-    color: '#F39C12', fontWeight: 700, fontSize: 16,
+    background: 'rgba(93,173,226,.2)', border: '2px solid rgba(93,173,226,.4)',
+    color: 'var(--primary)', fontWeight: 700, fontSize: 16,
     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   userName: { color: 'white', fontWeight: 600, fontSize: 16, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: 4 },
@@ -262,10 +262,10 @@ const styles = {
     background: 'transparent', cursor: 'pointer', color: 'rgba(255,255,255,.65)',
     fontSize: 16, fontWeight: 500, textAlign: 'left', transition: 'all .2s ease', position: 'relative',
   },
-  navActive: { background: 'rgba(243,156,18,.15)', color: '#F39C12' },
+  navActive: { background: 'rgba(93,173,226,.15)', color: 'var(--primary)' },
   navIcon: { flexShrink: 0, display: 'flex', alignItems: 'center' },
   navLabel: { flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-  navDot: { width: 8, height: 8, borderRadius: '50%', background: '#F39C12', flexShrink: 0 },
+  navDot: { width: 8, height: 8, borderRadius: '50%', background: 'var(--primary)', flexShrink: 0 },
   unreadBadge: {
     minWidth: 22, height: 22, borderRadius: 11, background: '#E74C3C',
     color: 'white', fontSize: 12, fontWeight: 700,

@@ -28,6 +28,15 @@ export default function EvaluationsPage() {
   const [showMatierePicker, setShowMatierePicker] = useState(false);
 
   const isLarge = ['fondateur', 'directeur', 'admin'].includes(utilisateurActif?.role);
+
+  const mesClassesIds = utilisateurActif?.classesIds?.length
+    ? utilisateurActif.classesIds
+    : [utilisateurActif?.classeId].filter(Boolean);
+
+  const classesAccessibles = utilisateurActif?.role === 'enseignant'
+    ? classes.filter(c => mesClassesIds.includes(c.id))
+    : classes;
+
   const classesFiltrees = utilisateurActif?.role === 'enseignant'
     ? classesAccessibles
     : (isLarge ? (selectedSection ? classesAccessibles.filter(c => c.section === selectedSection) : []) : classesAccessibles);
@@ -40,15 +49,6 @@ export default function EvaluationsPage() {
       </div>
     );
   }
-
-  // Filtrage des classes accessibles à l'enseignant
-  const mesClassesIds = utilisateurActif?.classesIds?.length
-    ? utilisateurActif.classesIds
-    : [utilisateurActif?.classeId].filter(Boolean);
-
-  const classesAccessibles = utilisateurActif?.role === 'enseignant'
-    ? classes.filter(c => mesClassesIds.includes(c.id))
-    : classes;
 
   const classe  = classesAccessibles.find(c => c.id === selectedClasse);
   const matieresClasse = selectedClasse ? getMatieresClasse(selectedClasse) : [];
