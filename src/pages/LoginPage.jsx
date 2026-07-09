@@ -47,14 +47,6 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  const comptes = [
-    { label:'Administrateur', email:'admin@ecole.cm', color:'#E74C3C', mdp: 'root' },
-    { label:'Fondateur', email:'fondateur@ecole.cm', color:'#F39C12' },
-    { label:'Directeur', email:'directeur@ecole.cm', color:'#27AE60' },
-    { label:'Enseignant', email:'enseignant@ecole.cm', color:'#60A5FA' },
-    { label:'Parent', email:'parent@ecole.cm', color:'#C084FC' },
-  ];
-
   return (
     <div style={styles.page} className="login-layout">
       {/* Fond animé avec symboles scolaires */}
@@ -68,69 +60,20 @@ export default function LoginPage() {
         <div style={{ ...styles.decorCircle, width:150, height:150, top:'40%', left:'35%', opacity:.03 }} />
       </div>
 
-      {/* Panneau gauche — sélecteur de compte démo */}
-      <div style={styles.left} className="login-left">
-        <div style={styles.leftInner}>
-          <div style={{ ...styles.demoLabel, marginBottom:24 }}>{t.comptesDemo}</div>
-          <div style={styles.demoGrid}>
-            {comptes.map(c => (
-              <button
-                key={c.email}
-                style={{ ...styles.demoBtn, borderColor: c.color + '55' }}
-                onClick={() => { setEmail(c.email); setMdp(c.mdp || '1234'); }}
-              >
-                <span style={{ color: c.color, fontWeight:700, fontSize:12 }}>{c.label}</span>
-                <span style={{ fontSize:10, color:'rgba(255,255,255,.45)' }}>{c.email}</span>
-              </button>
-            ))}
-          </div>
-
-          <div style={{ marginTop:40 }}>
-            <div style={styles.logoWrap}>
-              <img
-                src="./src/data/logo_ecole.png"
-                alt={`Logo ${schoolSettings?.nom || 'École'}`}
-                style={styles.logoImg}
-                onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
-              />
-              <div style={{ ...styles.logoFallback, display:'none' }}><GraduationCap size={40} color="#F39C12" /></div>
-            </div>
-            <h1 style={styles.schoolName}>{schoolSettings?.nom || 'École Les Étoiles'}</h1>
-            <p style={styles.schoolSub}>
-              {langue === 'fr'
-                ? schoolSettings?.sousTitreFR || 'Primaire & Maternelle — Yaoundé, Cameroun'
-                : schoolSettings?.sousTitreEN || 'Primary & Nursery School — Yaoundé, Cameroon'}
-            </p>
-
-            <div style={styles.features}>
-              {(langue === 'fr'
-                ? ['Gestion des élèves & classes', 'Bulletins & évaluations', 'Suivi des paiements', 'Transport scolaire', 'Messagerie intégrée']
-                : ['Student & class management', 'Report cards & evaluations', 'Payment tracking', 'School transport', 'Integrated messaging']
-              ).map((f, i) => (
-                <div key={i} style={styles.featureItem}>
-                  <span style={styles.featureDot} />
-                  <span>{f}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      {/* Boutons langue + dark mode en haut */}
+      <div style={styles.topControls}>
+        <button style={styles.ctrlBtn} onClick={toggleLangue}>
+          <span style={{ fontSize:10, fontWeight:700 }}>
+            {langue === 'fr' ? 'EN' : 'FR'}
+          </span>
+        </button>
+        <button style={styles.ctrlBtn} onClick={toggleDarkMode}>
+          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
       </div>
 
-      {/* Panneau droit — formulaire de connexion */}
-      <div style={styles.right} className="login-right">
-        {/* Boutons langue + dark mode en haut */}
-        <div style={styles.topControls}>
-          <button style={styles.ctrlBtn} onClick={toggleLangue}>
-            <span style={{ fontSize:10, fontWeight:700 }}>
-              {langue === 'fr' ? 'EN' : 'FR'}
-            </span>
-          </button>
-          <button style={styles.ctrlBtn} onClick={toggleDarkMode}>
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
-
+      {/* Panneau gauche — formulaire de connexion */}
+      <div style={styles.left} className="login-left">
         <div style={styles.card} className="login-card">
           <div style={{ textAlign:'center', marginBottom:32 }}>
             <div style={{ ...styles.cardIcon, display: 'flex', justifyContent: 'center' }}><Lock size={36} color="#0D2B40" /></div>
@@ -192,10 +135,39 @@ export default function LoginPage() {
               }
             </button>
           </form>
+        </div>
+      </div>
 
-          <p style={{ textAlign:'center', fontSize:12, color:'var(--text-muted)', marginTop:24 }}>
-            {t.mdpDemo}: <strong style={{ color:'var(--primary)' }}>1234</strong>
+      {/* Panneau droit — logo et présentation de l'école */}
+      <div style={styles.right} className="login-right">
+        <div style={styles.leftInner}>
+          <div style={styles.logoWrap}>
+            <img
+              src="./src/data/logo_ecole.png"
+              alt={`Logo ${schoolSettings?.nom || 'École'}`}
+              style={styles.logoImg}
+              onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }}
+            />
+            <div style={{ ...styles.logoFallback, display:'none' }}><GraduationCap size={40} color="#F39C12" /></div>
+          </div>
+          <h1 style={styles.schoolName}>{schoolSettings?.nom || 'École Les Étoiles'}</h1>
+          <p style={styles.schoolSub}>
+            {langue === 'fr'
+              ? schoolSettings?.sousTitreFR || 'Primaire & Maternelle — Yaoundé, Cameroun'
+              : schoolSettings?.sousTitreEN || 'Primary & Nursery School — Yaoundé, Cameroon'}
           </p>
+
+          <div style={styles.features}>
+            {(langue === 'fr'
+              ? ['Gestion des élèves & classes', 'Bulletins & évaluations', 'Suivi des paiements', 'Transport scolaire', 'Messagerie intégrée']
+              : ['Student & class management', 'Report cards & evaluations', 'Payment tracking', 'School transport', 'Integrated messaging']
+            ).map((f, i) => (
+              <div key={i} style={styles.featureItem}>
+                <span style={styles.featureDot} />
+                <span>{f}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -241,14 +213,7 @@ const styles = {
   features:    { display:'flex', flexDirection:'column', gap:11, marginBottom:36 },
   featureItem: { display:'flex', alignItems:'center', gap:12, color:'rgba(255,255,255,.8)', fontSize:14 },
   featureDot:  { width:6, height:6, borderRadius:'50%', background:'#F39C12', flexShrink:0 },
-  demoLabel:   { fontSize:11, fontWeight:700, letterSpacing:1, color:'rgba(255,255,255,.4)', textTransform:'uppercase', marginBottom:12 },
-  demoGrid:    { display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 },
-  demoBtn: {
-    background:'rgba(255,255,255,.06)', border:'1px solid',
-    borderRadius:10, padding:'10px 14px', cursor:'pointer',
-    display:'flex', flexDirection:'column', gap:3, textAlign:'left',
-    transition:'all .2s',
-  },
+
   right: {
     width:480, display:'flex', flexDirection:'column',
     alignItems:'center', justifyContent:'center',

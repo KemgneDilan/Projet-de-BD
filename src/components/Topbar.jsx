@@ -12,7 +12,7 @@ import {
   CreditCard, Bus, UsersRound, Settings, 
   FileEdit, Calculator, MessageSquare, ShieldAlert,
   Sun, Moon, CheckCircle, AlertTriangle, XCircle, ArrowLeft, Menu,
-  UserCircle, ShieldCheck, LogOut
+  UserCircle, ShieldCheck, LogOut, UserCheck, FileDown
 } from 'lucide-react';
 
 const PAGE_TITLES = {
@@ -23,7 +23,7 @@ const PAGE_TITLES = {
     paiements:'Gestion des Paiements', transport:'Transport Scolaire',
     personnel:'Personnel', parametres:'Paramètres',
     evaluations:'Évaluations', coefficients:'Coefficients',
-    messagerie:'Messagerie',
+    messagerie:'Messagerie', presences:'Présences',
   },
   en: {
     dashboard:'Dashboard', eleves:'Student Management',
@@ -32,7 +32,7 @@ const PAGE_TITLES = {
     paiements:'Payment Management', transport:'School Transport',
     personnel:'Staff', parametres:'Settings',
     evaluations:'Evaluations', coefficients:'Coefficients',
-    messagerie:'Messaging',
+    messagerie:'Messaging', presences:'Attendance',
   }
 };
 
@@ -49,13 +49,19 @@ const PAGE_ICONS = {
   evaluations: <FileEdit size={24} />, 
   coefficients: <Calculator size={24} />, 
   messagerie: <MessageSquare size={24} />,
+  banque_epreuves: <FileDown size={24} />,
+  presences: <UserCheck size={24} />,
 };
 
 const NAV_ITEMS = {
   admin: [
     { id:'dashboard',    icon: <LayoutDashboard size={16} /> },
     { id:'adminRoot',    icon: <ShieldCheck size={16} /> },
+    { id:'paiements',    icon: <CreditCard size={16} /> },
     { id:'personnel',    icon: <UsersRound size={16} /> },
+    { id:'banque_epreuves', icon: <FileDown size={16} /> },
+    { id:'coefficients', icon: <Calculator size={16} /> },
+    { id:'presences',        icon: <UserCheck size={16} /> },
     { id:'messagerie',   icon: <MessageSquare size={16} /> },
   ],
   fondateur: [
@@ -66,6 +72,9 @@ const NAV_ITEMS = {
     { id:'paiements',    icon: <CreditCard size={16} /> },
     { id:'transport',    icon: <Bus size={16} /> },
     { id:'personnel',    icon: <UsersRound size={16} /> },
+    { id:'banque_epreuves', icon: <FileDown size={16} /> },
+    { id:'coefficients', icon: <Calculator size={16} /> },
+    { id:'presences',        icon: <UserCheck size={16} /> },
     { id:'messagerie',   icon: <MessageSquare size={16} /> },
   ],
   directeur: [
@@ -77,6 +86,8 @@ const NAV_ITEMS = {
     { id:'transport',    icon: <Bus size={16} /> },
     { id:'personnel',    icon: <UsersRound size={16} /> },
     { id:'coefficients', icon: <Calculator size={16} /> },
+    { id:'banque_epreuves', icon: <FileDown size={16} /> },
+    { id:'presences',        icon: <UserCheck size={16} /> },
     { id:'messagerie',   icon: <MessageSquare size={16} /> },
   ],
   enseignant: [
@@ -86,6 +97,8 @@ const NAV_ITEMS = {
     { id:'bulletins',    icon: <FileText size={16} /> },
     { id:'saisie_notes', icon: <FileEdit size={16} /> },
     { id:'evaluations',  icon: <FileEdit size={16} /> },
+    { id:'banque_epreuves', icon: <FileDown size={16} /> },
+    { id:'presences',        icon: <UserCheck size={16} /> },
     { id:'messagerie',   icon: <MessageSquare size={16} /> },
   ],
   parent: [
@@ -102,21 +115,25 @@ const getLabel = (id, role, lang) => {
   const map = {
     admin: {
       dashboard:'Tableau de bord', adminRoot: t.adminRoot || 'Administration',
-      personnel: t.personnel, messagerie: t.messagerie,
+      paiements: t.paiements, personnel: t.personnel, messagerie: t.messagerie,
+      banque_epreuves: t.banqueEpreuves, coefficients: t.coefficients, presences: 'Présences'
     },
     fondateur: {
       dashboard:'Tableau de bord', eleves: t.eleves, classes: t.classes,
       bulletins: t.bulletins, paiements: t.paiements, transport: t.transport,
       personnel: t.personnel, messagerie: t.messagerie,
+      banque_epreuves: t.banqueEpreuves, coefficients: t.coefficients, presences: 'Présences'
     },
     directeur: {
       dashboard:'Tableau de bord', eleves: t.eleves, classes: t.classes,
       bulletins: t.bulletins, paiements: t.paiements, transport: t.transport,
       personnel: t.personnel, coefficients: t.coefficients, messagerie: t.messagerie,
+      banque_epreuves: t.banqueEpreuves, presences: 'Présences'
     },
     enseignant: {
       dashboard: t.monTableauDeBord, eleves: t.mesEleves, discipline: 'Discipline',
       bulletins: t.mesBulletins, saisie_notes: 'Saisie de notes', evaluations: t.evaluations, messagerie: t.messagerie,
+      banque_epreuves: t.banqueEpreuves, presences: 'Présences'
     },
     parent: {
       dashboard: t.mesEnfants, eleves: t.dossierScolaire,
@@ -144,6 +161,24 @@ export default function Topbar() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const navContainerRef = useRef(null);
+
+  useEffect(() => {
+    const container = navContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e) => {
+      // Si on n'est pas sur mobile (où c'est vertical), on défile horizontalement
+      if (window.innerWidth >= 1024 && e.deltaY !== 0) {
+        e.preventDefault();
+        container.scrollLeft += e.deltaY;
+      }
+    };
+    
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
   }, []);
 
   const titles = PAGE_TITLES[langue] || PAGE_TITLES.fr;
@@ -193,7 +228,8 @@ export default function Topbar() {
       )}
 
       <header style={styles.topbar}>
-        {/* Partie gauche : Titre & Sélecteurs (Langue & Dark Mode) */}
+        {/* Rangée principale : Titre + actions + menu burger + profil */}
+        <div style={styles.topbarRow}>
         <div style={styles.left}>
           <span style={styles.pageIcon}>{icon}</span>
           <div style={{ marginRight: 16 }}>
@@ -221,8 +257,12 @@ export default function Topbar() {
           </button>
         </div>
 
-        {/* Partie centrale : Navigation étendue (s'étend de droite à gauche) */}
-        <div className={`topbar-nav-container ${isSidebarOpen ? 'open' : ''}`}>
+        {/* Navigation : se déploie à l'intérieur du header */}
+        <div 
+          className={`topbar-nav-container ${isSidebarOpen ? 'open' : ''}`} 
+          ref={navContainerRef}
+          tabIndex={0}
+        >
           {items.map((item, index) => {
             const isActive = currentPage === item.id;
             const label = getLabel(item.id, utilisateurActif?.role, langue);
@@ -293,6 +333,7 @@ export default function Topbar() {
             </div>
           </div>
         </div>
+        </div>
       </header>
     </>
   );
@@ -310,10 +351,14 @@ const styles = {
   topbar: {
     background:'var(--bg-card)',
     borderBottom:'1px solid var(--border-color)',
-    padding:'0 24px', height:72,
+    position:'absolute', top:0, left:0, right:0, zIndex:50,
+    boxShadow:'0 2px 16px rgba(0,0,0,.04)',
+    display:'flex', flexDirection:'column',
+  },
+  topbarRow: {
     display:'flex', alignItems:'center', justifyContent:'space-between',
-    position:'sticky', top:0, zIndex:50,
-    boxShadow:'0 1px 12px rgba(0,0,0,.04)',
+    padding:'10px 24px', minHeight:54,
+    width:'100%',
   },
   left: { display:'flex', alignItems:'center', gap:12, flexShrink:0 },
   backBtn: {

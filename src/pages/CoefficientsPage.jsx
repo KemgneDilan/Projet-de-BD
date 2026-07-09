@@ -14,7 +14,7 @@ export default function CoefficientsPage() {
   const {
     classes, matieres, coefficients,
     modifierCoefficient, peutAcceder, langue,
-    getMatieresClasse,
+    getMatieresClasse, utilisateurActif,
   } = useApp();
   const t = T[langue] || T.fr;
 

@@ -59,6 +59,7 @@ export function AppProvider({ children }) {
   const [evaluations,  setEvaluations]  = useState(() => (mockData.evaluations || []).map(evaluation => ({ ...evaluation, session: evaluation.session || initialAnneeScolaire })));
   const [messages,     setMessages]     = useState(mockData.messages);
   const [emploisDuTemps, setEmploisDuTemps] = useState(() => (mockData.emploisDuTemps || []).map(edt => ({ ...edt, session: edt.session || initialAnneeScolaire })));
+  const [appels,       setAppels]       = useState(mockData.appels || []);
   const [sessions, setSessions] = useState(() => {
     const initialSession = buildSessionMetadata(initialAnneeScolaire);
     return [{
@@ -619,6 +620,60 @@ export function AppProvider({ children }) {
     notify('Frais mis à jour');
   };
 
+  /**
+   * Retourne les frais applicables pour un élève donné.
+   * Si des frais spécifiques à sa classe existent dans frais.classes[classeId],
+   * ils sont fusionnés avec les frais globaux (les valeurs spécifiques priment).
+   * Sinon, les frais globaux par défaut sont retournés.
+   */
+  const getFraisPourEleve = (eleve) => {
+    if (!eleve) return frais;
+    const classeId = eleve.classeId;
+    const fraisClasse = frais.classes?.[classeId];
+    if (!fraisClasse) return frais;
+    return {
+      ...frais,
+      inscription: fraisClasse.inscription ?? frais.inscription,
+      scolariteAnnuelle: fraisClasse.scolariteAnnuelle ?? frais.scolariteAnnuelle,
+      bus: fraisClasse.bus ?? frais.bus,
+      tranches: fraisClasse.tranches ?? frais.tranches,
+    };
+  };
+
+  /* ═══════════════════════════════════════════════════════════════
+     APPELS (PRÉSENCES)
+  ═══════════════════════════════════════════════════════════════ */
+  const enregistrerAppel = async (date, classeId, presences) => {
+    await delay(300);
+    const existingIndex = appels.findIndex(a => a.date === date && a.classeId === classeId);
+    
+    // Identifier les retards pour les ajouter à la discipline
+    let updatedEleves = [...eleves];
+    for (const [eleveId, statut] of Object.entries(presences)) {
+      if (statut === 'retard') {
+        // Vérifier si l'élève n'était pas déjà marqué en retard ce jour-là pour éviter les doublons d'incidents
+        const etaitDejaRetard = existingIndex >= 0 && appels[existingIndex].presences[eleveId] === 'retard';
+        
+        if (!etaitDejaRetard) {
+          const eleve = updatedEleves.find(e => e.id === eleveId);
+          if (eleve) {
+            const newIncident = { id: Date.now().toString() + eleveId, type: 'Retard', date: date, points: 1 };
+            const updatedIncidents = [...(eleve.incidents || []), newIncident];
+            updatedEleves = updatedEleves.map(e => e.id === eleveId ? { ...e, incidents: updatedIncidents } : e);
+          }
+        }
+      }
+    }
+    setEleves(updatedEleves);
+
+    if (existingIndex >= 0) {
+      setAppels(prev => prev.map((a, i) => i === existingIndex ? { ...a, presences } : a));
+    } else {
+      setAppels(prev => [...prev, { id: randomId(), date, classeId, presences }]);
+    }
+    notify('Présences enregistrées avec succès');
+  };
+
   /* ═══════════════════════════════════════════════════════════════
      PARAMÈTRES GLOBAUX DE L'ÉCOLE
   ═══════════════════════════════════════════════════════════════ */
@@ -774,6 +829,10 @@ export function AppProvider({ children }) {
 
       // Frais
       setFrais: saveFrais,
+      getFraisPourEleve,
+
+      // Appels
+      appels, enregistrerAppel,
 
       // Paramètres Globaux
       updateSchoolSettings,

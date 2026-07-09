@@ -16,6 +16,7 @@ import MessageriePage from './pages/MessageriePage';
 import SaisieNotesPage from './pages/SaisieNotesPage';
 import AdminPage from './pages/AdminPage';
 import BanqueEpreuvesPage from './pages/BanqueEpreuvesPage';
+import PresencesPage from './pages/PresencesPage';
 import { ClassesPage, TransportPage, PersonnelPage, ParametresPage } from './pages/OthersPages';
 import Topbar from './components/Topbar';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -61,15 +62,16 @@ function AppInner() {
     coefficients:<CoefficientsPage />,
     messagerie:  <MessageriePage />,
     banque_epreuves: <BanqueEpreuvesPage />,
+    presences:   <PresencesPage />,
     adminRoot:   <AdminPage />,
   };
 
   return (
     <div style={{ display:'flex', height:'100vh', overflow:'hidden' }}>
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', position: 'relative' }}>
         <Topbar />
         <main
-          style={{ flex:1, overflowY:'auto', background:'var(--bg-app)' }}
+          style={{ flex:1, overflowY:'auto', background:'var(--bg-app)', paddingTop: '64px' }}
           className="animate-fade"
         >
           {PAGES[currentPage] || PAGES.dashboard}

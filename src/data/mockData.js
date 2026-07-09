@@ -315,7 +315,8 @@ const frais = {
     { id: 't3', nom: '3ème Tranche', montant: 40000, echeance: '2026-04-15', datePaiement: null },
   ],
   bus: 15000,
-  anneeScolaire: '2025-2026'
+  anneeScolaire: '2025-2026',
+  classes: {}
 };
 
 // ── PAIEMENTS ─────────────────────────────────────────────────────────────────────
@@ -497,10 +498,12 @@ const emploisDuTemps = [
     }
   }
 ];
+// ── APPELS (PRÉSENCES) ──────────────────────────────────────────────────────────
+const appels = [];
 
 export default {
   users, classes, eleves, matieres,
   paiements, notes, frais,
   coefficients, evaluations, messages,
-  emploisDuTemps
+  emploisDuTemps, appels
 };

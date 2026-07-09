@@ -10,15 +10,18 @@ import {
   LayoutDashboard, Users, School, FileText,
   CreditCard, Bus, UsersRound, MessageSquare,
   Settings, Calculator, FileEdit, UserCircle, LogOut, GraduationCap,
-  ShieldCheck, ShieldAlert, X, FileDown
+  ShieldCheck, ShieldAlert, X, FileDown, UserCheck
 } from 'lucide-react';
 
 const NAV_ITEMS = {
   admin: [
     { id:'dashboard',    icon: <LayoutDashboard size={20} /> },
     { id:'adminRoot',    icon: <ShieldCheck size={20} /> },
+    { id:'paiements',    icon: <CreditCard size={20} /> },
     { id:'personnel',    icon: <UsersRound size={20} /> },
     { id:'banque_epreuves', icon: <FileDown size={20} /> },
+    { id:'coefficients', icon: <Calculator size={20} /> },
+    { id:'presences',        icon: <UserCheck size={20} /> },
     { id:'messagerie',   icon: <MessageSquare size={20} /> },
     { id:'parametres',   icon: <Settings size={20} /> },
   ],
@@ -31,6 +34,8 @@ const NAV_ITEMS = {
     { id:'transport',    icon: <Bus size={20} /> },
     { id:'personnel',    icon: <UsersRound size={20} /> },
     { id:'banque_epreuves', icon: <FileDown size={20} /> },
+    { id:'coefficients', icon: <Calculator size={20} /> },
+    { id:'presences',        icon: <UserCheck size={20} /> },
     { id:'messagerie',   icon: <MessageSquare size={20} /> },
     { id:'parametres',   icon: <Settings size={20} /> },
   ],
@@ -44,6 +49,7 @@ const NAV_ITEMS = {
     { id:'personnel',    icon: <UsersRound size={20} /> },
     { id:'coefficients', icon: <Calculator size={20} /> },
     { id:'banque_epreuves', icon: <FileDown size={20} /> },
+    { id:'presences',        icon: <UserCheck size={20} /> },
     { id:'messagerie',   icon: <MessageSquare size={20} /> },
     { id:'parametres',   icon: <Settings size={20} /> },
   ],
@@ -55,6 +61,7 @@ const NAV_ITEMS = {
     { id:'saisie_notes', icon: <FileEdit size={20} /> },
     { id:'evaluations',  icon: <FileEdit size={20} /> },
     { id:'banque_epreuves', icon: <FileDown size={20} /> },
+    { id:'presences',        icon: <UserCheck size={20} /> },
     { id:'messagerie',   icon: <MessageSquare size={20} /> },
     { id:'parametres',   icon: <Settings size={20} /> },
   ],
@@ -73,26 +80,26 @@ const getLabel = (id, role, lang) => {
   const map = {
     admin: {
       dashboard:'Tableau de bord', adminRoot: t.adminRoot || 'Administration',
-      personnel: t.personnel, parametres: t.parametres, messagerie: t.messagerie,
-      banque_epreuves: t.banqueEpreuves,
+      paiements: t.paiements, personnel: t.personnel, parametres: t.parametres, messagerie: t.messagerie,
+      banque_epreuves: t.banqueEpreuves, coefficients: t.coefficients, presences: 'Présences'
     },
     fondateur: {
       dashboard:'Tableau de bord', eleves: t.eleves, classes: t.classes,
       bulletins: t.bulletins, paiements: t.paiements, transport: t.transport,
       personnel: t.personnel, parametres: t.parametres, messagerie: t.messagerie,
-      banque_epreuves: t.banqueEpreuves,
+      banque_epreuves: t.banqueEpreuves, coefficients: t.coefficients, presences: 'Présences'
     },
     directeur: {
       dashboard:'Tableau de bord', eleves: t.eleves, classes: t.classes,
       bulletins: t.bulletins, paiements: t.paiements, transport: t.transport,
       personnel: t.personnel, coefficients: t.coefficients, messagerie: t.messagerie,
-      parametres: t.parametres, banque_epreuves: t.banqueEpreuves,
+      parametres: t.parametres, banque_epreuves: t.banqueEpreuves, presences: 'Présences'
     },
     enseignant: {
       dashboard: t.monTableauDeBord, eleves: t.mesEleves, discipline: 'Discipline',
       bulletins: t.mesBulletins, saisie_notes: 'Saisie de notes', evaluations: t.evaluations,
       banque_epreuves: t.banqueEpreuves, messagerie: t.messagerie,
-      parametres: t.parametres,
+      parametres: t.parametres, presences: 'Présences'
     },
     parent: {
       dashboard: t.mesEnfants, eleves: t.dossierScolaire,

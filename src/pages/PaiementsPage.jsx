@@ -2,23 +2,26 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
   Banknote, TrendingUp, FileText, 
-  User, List, Settings, Search, Printer, Check, Filter, AlertTriangle
+  User, List, Settings, Search, Printer, Check, Filter, AlertTriangle, RotateCcw,
+  Trash2, Plus
 } from 'lucide-react';
 import { StudentProfileModal } from './ElevesPage';
 
 export default function PaiementsPage() {
-  const { eleves, classes, paiements, frais, enregistrerPaiement, utilisateurActif, setFrais, schoolSettings } = useApp();
+  const { eleves, classes, paiements, frais, enregistrerPaiement, utilisateurActif, setFrais, getFraisPourEleve, schoolSettings } = useApp();
   const [modal, setModal] = useState(null);
   const [selectedEleve, setSelectedEleve] = useState('');
   const [formPay, setFormPay] = useState({ type: 'scolarite', montant: '', statut: 'payé', trancheId: '' });
   const [search, setSearch] = useState('');
-  const [onglet, setOnglet] = useState('eleve'); // liste | eleve | parametres
-  const [filtrePaiement, setFiltrePaiement] = useState('tous'); // 'tous' | 'ajour' | 'impayes'
+  const [onglet, setOnglet] = useState('eleve');
+  const [filtrePaiement, setFiltrePaiement] = useState('tous');
   const [selectedEleveObj, setSelectedEleveObj] = useState(null);
   const [viewTab, setViewTab] = useState('infos');
+  const [selectedClasseParam, setSelectedClasseParam] = useState('');
 
   const role = utilisateurActif?.role;
-  const peutModifier = ['directeur', 'fondateur'].includes(role);
+  const peutModifier = ['directeur', 'fondateur', 'admin'].includes(role);
+  const peutVoirParametres = ['fondateur', 'admin'].includes(role);
 
   const actifs = eleves.filter(e => e.statut === 'actif');
   const elevesFiltered = actifs.filter(e => {
@@ -28,8 +31,10 @@ export default function PaiementsPage() {
   });
 
   const getTranchesEnRetard = (eleveId) => {
+    const eleve = eleves.find(e => e.id === eleveId);
+    const fraisEleve = getFraisPourEleve(eleve);
     const today = new Date();
-    return frais.tranches.filter(t => {
+    return fraisEleve.tranches.filter(t => {
       const isPast = new Date(t.echeance) < today;
       const hasPaid = paiements.some(p => p.eleveId === eleveId && p.trancheId === t.id && p.statut === 'payé');
       return isPast && !hasPaid;
@@ -44,7 +49,10 @@ export default function PaiementsPage() {
   });
 
   const totalEncaisse = paiements.filter(p => p.statut === 'payé').reduce((s, p) => s + p.montant, 0);
-  const totalAttendu = actifs.length * (frais.inscription + frais.scolariteAnnuelle);
+  const totalAttendu = actifs.reduce((sum, e) => {
+    const f = getFraisPourEleve(e);
+    return sum + f.inscription + f.scolariteAnnuelle;
+  }, 0);
   const tauxRecouvrement = totalAttendu ? Math.round((totalEncaisse / totalAttendu) * 100) : 0;
 
   const paiementsFiltered = paiements.filter(p => {
@@ -64,7 +72,9 @@ export default function PaiementsPage() {
 
   const openPaiement = (eleveId) => {
     setSelectedEleve(eleveId || '');
-    setFormPay({ type: 'scolarite', montant: frais.scolariteAnnuelle / frais.tranches.length, statut: 'payé', trancheId: frais.tranches[0]?.id });
+    const eleve = eleves.find(e => e.id === eleveId);
+    const f = getFraisPourEleve(eleve);
+    setFormPay({ type: 'scolarite', montant: f.scolariteAnnuelle / f.tranches.length, statut: 'payé', trancheId: f.tranches[0]?.id });
     setModal('paiement');
   };
 
@@ -159,7 +169,7 @@ export default function PaiementsPage() {
         {[
           { key: 'liste', label: 'Tous les paiements', icon: <List size={16} /> },
           { key: 'eleve', label: 'Par élève', icon: <User size={16} /> },
-          ...(role === 'fondateur' ? [{ key: 'parametres', label: 'Paramètres', icon: <Settings size={16} /> }] : [])
+          ...(peutVoirParametres ? [{ key: 'parametres', label: 'Paramètres', icon: <Settings size={16} /> }] : [])
         ].map(t => (
           <button key={t.key} className={`pill-tab ${onglet === t.key ? 'active' : ''}`} onClick={() => setOnglet(t.key)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {t.icon} <span>{t.label}</span>
@@ -193,7 +203,7 @@ export default function PaiementsPage() {
                   <tr key={p.id}>
                     <td><code style={{ fontSize: 12, background: 'var(--gray-100)', padding: '2px 8px', borderRadius: 4 }}>{p.recu}</code></td>
                     <td><strong>{getNomEleve(p.eleveId)}</strong></td>
-                    <td style={{ textTransform: 'capitalize' }}>{p.type}{p.trancheId ? ` (${frais.tranches.find(t => t.id === p.trancheId)?.nom || ''})` : ''}</td>
+                    <td style={{ textTransform: 'capitalize' }}>{p.type}{p.trancheId ? ` (${(getFraisPourEleve(eleves.find(e => e.id === p.eleveId))?.tranches || frais.tranches).find(t => t.id === p.trancheId)?.nom || ''})` : ''}</td>
                     <td><strong style={{ color: 'var(--success)' }}>{p.montant.toLocaleString('fr')} FCFA</strong></td>
                     <td>{p.date}</td>
                     <td><span className={`badge ${p.statut === 'payé' ? 'badge-success' : 'badge-warning'}`}>{p.statut}</span></td>
@@ -224,7 +234,8 @@ export default function PaiementsPage() {
             const pays = getPaiementsEleve(eleve.id);
             const total = totalPaye(eleve.id);
             const inscrit = estInscrit(eleve.id);
-            const totalDu = frais.inscription + frais.scolariteAnnuelle + (eleve.bus ? frais.bus : 0);
+            const fraisE = getFraisPourEleve(eleve);
+            const totalDu = fraisE.inscription + fraisE.scolariteAnnuelle + (eleve.bus ? fraisE.bus : 0);
             const restant = Math.max(0, totalDu - total);
             const retards = getTranchesEnRetard(eleve.id);
             
@@ -277,7 +288,7 @@ export default function PaiementsPage() {
                     <div style={{ marginTop: 12 }}>
                       {pays.map(p => (
                         <div key={p.id} style={styles.payItem}>
-                          <span style={{ fontSize: 12 }}>{p.recu} — {p.type} {p.trancheId ? `(${frais.tranches.find(t => t.id === p.trancheId)?.nom})` : ''} — {new Date(p.date).toLocaleDateString('fr-FR')}</span>
+                          <span style={{ fontSize: 12 }}>{p.recu} — {p.type} {p.trancheId ? `(${(getFraisPourEleve(eleve)?.tranches || frais.tranches).find(t => t.id === p.trancheId)?.nom})` : ''} — {new Date(p.date).toLocaleDateString('fr-FR')}</span>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                             <strong style={{ color: 'var(--success)' }}>{p.montant.toLocaleString('fr')} FCFA</strong>
                             <span className="badge badge-success" style={{ fontSize: 10 }}>{p.statut}</span>
@@ -300,46 +311,197 @@ export default function PaiementsPage() {
       )}
 
       {/* PARAMÈTRES FRAIS */}
-      {onglet === 'parametres' && role === 'fondateur' && (
+      {onglet === 'parametres' && peutVoirParametres && (() => {
+        const isClasseSelected = selectedClasseParam !== '';
+        const classeObj = isClasseSelected ? classes.find(c => c.id === selectedClasseParam) : null;
+        const fraisClasse = isClasseSelected ? frais.classes?.[selectedClasseParam] : null;
+        const fraisAffiche = isClasseSelected
+          ? {
+              inscription: fraisClasse?.inscription ?? frais.inscription,
+              scolariteAnnuelle: fraisClasse?.scolariteAnnuelle ?? frais.scolariteAnnuelle,
+              bus: fraisClasse?.bus ?? frais.bus,
+              tranches: fraisClasse?.tranches ?? frais.tranches,
+            }
+          : frais;
+
+        const updateFraisField = (field, value) => {
+          if (!isClasseSelected) {
+            setFrais(prev => ({ ...prev, [field]: value }));
+          } else {
+            setFrais(prev => ({
+              ...prev,
+              classes: {
+                ...prev.classes,
+                [selectedClasseParam]: {
+                  ...(prev.classes?.[selectedClasseParam] || {}),
+                  inscription: prev.classes?.[selectedClasseParam]?.inscription ?? prev.inscription,
+                  scolariteAnnuelle: prev.classes?.[selectedClasseParam]?.scolariteAnnuelle ?? prev.scolariteAnnuelle,
+                  bus: prev.classes?.[selectedClasseParam]?.bus ?? prev.bus,
+                  tranches: prev.classes?.[selectedClasseParam]?.tranches ?? prev.tranches.map(t => ({ ...t })),
+                  [field]: value,
+                }
+              }
+            }));
+          }
+        };
+
+        const updateTranche = (index, field, value) => {
+          if (!isClasseSelected) {
+            setFrais(prev => ({
+              ...prev,
+              tranches: prev.tranches.map((tr, j) => j === index ? { ...tr, [field]: value } : tr)
+            }));
+          } else {
+            setFrais(prev => {
+              const currentTranches = prev.classes?.[selectedClasseParam]?.tranches ?? prev.tranches.map(t => ({ ...t }));
+              return {
+                ...prev,
+                classes: {
+                  ...prev.classes,
+                  [selectedClasseParam]: {
+                    ...(prev.classes?.[selectedClasseParam] || {}),
+                    inscription: prev.classes?.[selectedClasseParam]?.inscription ?? prev.inscription,
+                    scolariteAnnuelle: prev.classes?.[selectedClasseParam]?.scolariteAnnuelle ?? prev.scolariteAnnuelle,
+                    bus: prev.classes?.[selectedClasseParam]?.bus ?? prev.bus,
+                    tranches: currentTranches.map((tr, j) => j === index ? { ...tr, [field]: value } : tr),
+                  }
+                }
+              };
+            });
+          }
+        };
+
+        const ajouterTranche = () => {
+          const newTranche = { id: 't' + Date.now(), nom: `Nouvelle tranche`, montant: 0, echeance: '', datePaiement: null };
+          if (!isClasseSelected) {
+            setFrais(prev => ({ ...prev, tranches: [...prev.tranches, newTranche] }));
+          } else {
+            setFrais(prev => {
+              const currentTranches = prev.classes?.[selectedClasseParam]?.tranches ?? prev.tranches.map(t => ({ ...t }));
+              return {
+                ...prev,
+                classes: {
+                  ...prev.classes,
+                  [selectedClasseParam]: {
+                    ...(prev.classes?.[selectedClasseParam] || {}),
+                    inscription: prev.classes?.[selectedClasseParam]?.inscription ?? prev.inscription,
+                    scolariteAnnuelle: prev.classes?.[selectedClasseParam]?.scolariteAnnuelle ?? prev.scolariteAnnuelle,
+                    bus: prev.classes?.[selectedClasseParam]?.bus ?? prev.bus,
+                    tranches: [...currentTranches, newTranche],
+                  }
+                }
+              };
+            });
+          }
+        };
+
+        const supprimerTranche = (index) => {
+          if (!isClasseSelected) {
+            setFrais(prev => ({
+              ...prev,
+              tranches: prev.tranches.filter((_, j) => j !== index)
+            }));
+          } else {
+            setFrais(prev => {
+              const currentTranches = prev.classes?.[selectedClasseParam]?.tranches ?? prev.tranches.map(t => ({ ...t }));
+              return {
+                ...prev,
+                classes: {
+                  ...prev.classes,
+                  [selectedClasseParam]: {
+                    ...(prev.classes?.[selectedClasseParam] || {}),
+                    inscription: prev.classes?.[selectedClasseParam]?.inscription ?? prev.inscription,
+                    scolariteAnnuelle: prev.classes?.[selectedClasseParam]?.scolariteAnnuelle ?? prev.scolariteAnnuelle,
+                    bus: prev.classes?.[selectedClasseParam]?.bus ?? prev.bus,
+                    tranches: currentTranches.filter((_, j) => j !== index),
+                  }
+                }
+              };
+            });
+          }
+        };
+
+        const resetClasseFrais = () => {
+          setFrais(prev => {
+            const newClasses = { ...prev.classes };
+            delete newClasses[selectedClasseParam];
+            return { ...prev, classes: newClasses };
+          });
+        };
+
+        return (
         <div className="card">
-          <div className="card-header"><h3 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Settings size={18} /> Paramétrage des frais scolaires</h3></div>
+          <div className="card-header" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}><Settings size={18} /> Paramétrage des frais scolaires</h3>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <select className="form-control" value={selectedClasseParam} onChange={e => setSelectedClasseParam(e.target.value)} style={{ maxWidth: 320 }}>
+                <option value="">— Frais généraux (par défaut) —</option>
+                {classes.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.nom} ({c.niveau}) {frais.classes?.[c.id] ? '✦ Personnalisé' : ''}
+                  </option>
+                ))}
+              </select>
+              {isClasseSelected && fraisClasse && (
+                <button className="btn btn-ghost btn-sm" onClick={resetClasseFrais} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--danger)' }}>
+                  <RotateCcw size={14} /> Rétablir les frais généraux
+                </button>
+              )}
+            </div>
+            {isClasseSelected && (
+              <div style={{ fontSize: 13, padding: '8px 12px', borderRadius: 8, background: fraisClasse ? '#FEF9E7' : '#EBF5FB', color: fraisClasse ? '#856404' : '#1B4F72', border: `1px solid ${fraisClasse ? '#F9E79F' : '#AED6F1'}` }}>
+                {fraisClasse
+                  ? `⚡ Cette classe (${classeObj?.nom}) utilise des frais personnalisés.`
+                  : `ℹ️ Cette classe (${classeObj?.nom}) utilise les frais généraux par défaut. Modifiez un champ pour créer une configuration spécifique.`}
+              </div>
+            )}
+          </div>
           <div className="card-body">
             <div style={styles.formGrid}>
               <div className="form-group">
                 <label className="form-label">Frais d'inscription (FCFA)</label>
-                <input className="form-control" type="number" value={frais.inscription}
-                  onChange={e => setFrais(prev => ({ ...prev, inscription: Number(e.target.value) }))}/>
+                <input className="form-control" type="number" value={fraisAffiche.inscription}
+                  onChange={e => updateFraisField('inscription', Number(e.target.value))}/>
               </div>
               <div className="form-group">
                 <label className="form-label">Scolarité annuelle (FCFA)</label>
-                <input className="form-control" type="number" value={frais.scolariteAnnuelle}
-                  onChange={e => setFrais(prev => ({ ...prev, scolariteAnnuelle: Number(e.target.value) }))}/>
+                <input className="form-control" type="number" value={fraisAffiche.scolariteAnnuelle}
+                  onChange={e => updateFraisField('scolariteAnnuelle', Number(e.target.value))}/>
               </div>
               <div className="form-group">
                 <label className="form-label">Frais de bus (FCFA/an)</label>
-                <input className="form-control" type="number" value={frais.bus}
-                  onChange={e => setFrais(prev => ({ ...prev, bus: Number(e.target.value) }))}/>
+                <input className="form-control" type="number" value={fraisAffiche.bus}
+                  onChange={e => updateFraisField('bus', Number(e.target.value))}/>
               </div>
             </div>
             <div style={{ marginTop: 8 }}>
-              <div style={styles.sectionLabel}>Tranches de paiement</div>
-              {frais.tranches.map((t, i) => (
+              <div style={{ ...styles.sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Tranches de paiement</span>
+                <button className="btn btn-ghost btn-sm" onClick={ajouterTranche} style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--primary)' }}>
+                  <Plus size={14} /> Ajouter une tranche
+                </button>
+              </div>
+              {fraisAffiche.tranches.map((t, i) => (
                 <div key={t.id} style={styles.trancheRow}>
                   <input className="form-control" value={t.nom}
-                    onChange={e => setFrais(prev => ({ ...prev, tranches: prev.tranches.map((tr, j) => j === i ? { ...tr, nom: e.target.value } : tr) }))}
+                    onChange={e => updateTranche(i, 'nom', e.target.value)}
                     style={{ flex: 1 }}/>
                   <input className="form-control" type="number" value={t.montant}
-                    onChange={e => setFrais(prev => ({ ...prev, tranches: prev.tranches.map((tr, j) => j === i ? { ...tr, montant: Number(e.target.value) } : tr) }))}
+                    onChange={e => updateTranche(i, 'montant', Number(e.target.value))}
                     style={{ width: 130 }} placeholder="Montant"/>
                   <input className="form-control" type="date" value={t.echeance}
-                    onChange={e => setFrais(prev => ({ ...prev, tranches: prev.tranches.map((tr, j) => j === i ? { ...tr, echeance: e.target.value } : tr) }))}
+                    onChange={e => updateTranche(i, 'echeance', e.target.value)}
                     style={{ width: 150 }}/>
+                  <button className="btn btn-ghost btn-icon" onClick={() => supprimerTranche(i)} style={{ color: 'var(--danger)', flexShrink: 0 }} title="Supprimer cette tranche">
+                    <Trash2 size={18} />
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* MODAL PAIEMENT */}
       {modal === 'paiement' && (
@@ -365,12 +527,16 @@ export default function PaiementsPage() {
                   <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>{eleves.find(e => e.id === selectedEleve)?.matricule}</span>
                 </div>
               )}
+              {(() => {
+                const selEleve = eleves.find(e => e.id === selectedEleve);
+                const fModal = getFraisPourEleve(selEleve);
+                return (<>
               <div className="form-group">
                 <label className="form-label">Type de paiement</label>
                 <select className="form-control" value={formPay.type} onChange={e => {
                   const type = e.target.value;
-                  const montant = type === 'inscription' ? frais.inscription : type === 'bus' ? frais.bus : frais.tranches[0]?.montant;
-                  setFormPay({ ...formPay, type, montant, trancheId: type === 'scolarite' ? frais.tranches[0]?.id : '' });
+                  const montant = type === 'inscription' ? fModal.inscription : type === 'bus' ? fModal.bus : fModal.tranches[0]?.montant;
+                  setFormPay({ ...formPay, type, montant, trancheId: type === 'scolarite' ? fModal.tranches[0]?.id : '' });
                 }}>
                   <option value="inscription">Frais d'inscription</option>
                   <option value="scolarite">Scolarité (par tranche)</option>
@@ -382,11 +548,13 @@ export default function PaiementsPage() {
                 <div className="form-group">
                   <label className="form-label">Tranche</label>
                   <select className="form-control" value={formPay.trancheId}
-                    onChange={e => { const t = frais.tranches.find(t => t.id === e.target.value); setFormPay({ ...formPay, trancheId: e.target.value, montant: t?.montant }); }}>
-                    {frais.tranches.map(t => <option key={t.id} value={t.id}>{t.nom} — {t.montant.toLocaleString('fr')} FCFA</option>)}
+                    onChange={e => { const t = fModal.tranches.find(t => t.id === e.target.value); setFormPay({ ...formPay, trancheId: e.target.value, montant: t?.montant }); }}>
+                    {fModal.tranches.map(t => <option key={t.id} value={t.id}>{t.nom} — {t.montant.toLocaleString('fr')} FCFA</option>)}
                   </select>
                 </div>
               )}
+                </>);
+              })()}
               <div className="form-group">
                 <label className="form-label">Montant (FCFA) *</label>
                 <input className="form-control" type="number" value={formPay.montant}
